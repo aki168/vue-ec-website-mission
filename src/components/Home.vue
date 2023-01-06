@@ -1,29 +1,10 @@
 <script setup>
-import { RouterLink } from 'vue-router';
-import axios from 'axios'
-import router from '../router';
-
-const base = '/-vue-w2'
+import login from '@/mixins/login';
 
 const user = {
   username: '',
   password: ''
 }
-
-function login() {
-  const api = 'https://vue3-course-api.hexschool.io/v2/admin/signin';
-  axios.post(api, user).then((response) => {
-    const { token, expired } = response.data;
-    // 寫入 cookie token
-    // expires 設置有效時間
-    document.cookie = `hexToken=${token};expires=${new Date(expired)}; path=/`;
-    router.push(`${base}/products`)
-  }).catch((err) => {
-    alert(err.response.data.message)
-  });
-}
-
-
 </script>
 
 
@@ -34,7 +15,7 @@ function login() {
         請先登入
       </h1>
       <div class="col-8">
-        <form class="form-signin" @submit.prevent="login">
+        <form class="form-signin" @submit.prevent="login(user)">
           <div class="form-floating mb-3">
             <input type="email" class="form-control" id="floatingInput" placeholder="name@example.com" required autofocus 
               :value="user.username" @change="user.username = $event.target.value"
@@ -47,14 +28,14 @@ function login() {
               >
             <label for="floatingPassword">Password</label>
           </div>
-          <button class="btn btn-lg btn-primary w-100 mt-3" type="submit">
+          <v-btn color="blue" class="w-100 mt-3" type="submit">
             登入
-          </button>
+          </v-btn>
         </form>
       </div>
     </div>
     <p class="mt-5 mb-3 text-muted text-center">
-      &copy; 2023~∞ - Hex School
+      &copy; 2022 ~ 2023 - VUE 電商後台
     </p>
   </div>
 </template>

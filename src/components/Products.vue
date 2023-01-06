@@ -1,10 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-// ref 就是 Vue 2 時的 data
 import axios from 'axios';
-import router from '../router';
-
-const base = '/-vue-w2'
+import checkAdmin from '@/mixins/checkAdmin';
+import logout from '@/mixins/logout'
 
 // data
 const apiUrl = 'https://vue3-course-api.hexschool.io/v2/';
@@ -13,17 +11,6 @@ let products = ref([]);
 let tempProduct = ref({});
 
 // methods
-async function checkAdmin() {
-  const url = `${apiUrl}/api/user/check`;
-  await axios.post(url).then(() => {
-    getData()
-  })
-    .catch(err => {
-      alert('請重新登入')
-      router.push(base)
-    })
-}
-
 async function getData() {
   const url = `${apiUrl}/api/${apiPath}/admin/products`;
   await axios.get(url).then((res) => {
@@ -35,13 +22,6 @@ async function getData() {
     })
 }
 
-function logout() {
-  document.cookie = "hexToken='';expires=0; path=/";
-  const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
-  axios.defaults.headers.common.Authorization = token;
-  checkAdmin()
-}
-
 function showDetails(item) {
   tempProduct.value = item
 }
@@ -51,9 +31,7 @@ onMounted(() => {
   axios.defaults.headers.common.Authorization = token;
   checkAdmin()
 })
-
 </script>
-
 
 <template>
   <nav class="bg-primary p-2 d-flex">

@@ -1,13 +1,41 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+import logout from '@/mixins/logout';
+import checkAdmin from '@/mixins/checkAdmin';
+
+// data
+const apiUrl = 'https://vue3-course-api.hexschool.io/v2/';
+const apiPath = 'cryptalk';
 const dialog = ref(false)
 const delDialog = ref(false)
-</script>
 
+// methods
+async function getData() {
+  const url = `${apiUrl}/api/${apiPath}/admin/products`;
+  await axios.get(url).then((res) => {
+    products.value = res.data.products
+    console.log(res.data.products)
+  })
+    .catch(err => {
+      alert(err.response.data.message)
+    })
+}
+
+onMounted(() => {
+  const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
+  axios.defaults.headers.common.Authorization = token;
+  checkAdmin()
+})
+</script>
 
 <template>
   <div class="text-center container vh-100">
-
+    <nav class="p-2 d-flex">
+    <v-btn @click="logout">
+      登出
+    </v-btn>
+  </nav>
     <v-btn class="my-2 d-block ms-auto" color="green lighten-2" dark v-bind="attrs" v-on="on" @click="dialog = true">
       建立新的商品
     </v-btn>
@@ -143,7 +171,8 @@ const delDialog = ref(false)
               </div>
               <div class="mb-3">
                 <div class="form-check">
-                  <v-checkbox label="是否啟用" color="success" value="success" hide-details :true-value="1" :false-value="0"/>
+                  <v-checkbox label="是否啟用" color="success" value="success" hide-details :true-value="1"
+                    :false-value="0" />
                 </div>
               </div>
             </div>
