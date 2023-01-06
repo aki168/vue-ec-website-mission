@@ -1,4 +1,4 @@
-# default
+# vue 電商網站
 
 ## Project setup
 
