@@ -1,6 +1,6 @@
 import axios from 'axios';
 import router from '../router';
-const base = '/-vue-w2'
+const base = '/vue-ec-website-mission'
 
 async function checkAdmin(fetchApi) {
   const url = `https://vue3-course-api.hexschool.io/v2/api/user/check`;

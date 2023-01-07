@@ -1,7 +1,7 @@
 import axios from 'axios'
 import router from '../router';
 
-const base = '/-vue-w2'
+const base = '/vue-ec-website-mission'
 
 function login(user) {
   const api = 'https://vue3-course-api.hexschool.io/v2/admin/signin';

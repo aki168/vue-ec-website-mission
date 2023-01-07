@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Home from '../components/Home.vue'
-import Products from '../components/Products.vue'
-import Admin from '../components/Admin.vue'
+import Home from '../views/Home.vue'
+import Products from '../views/Products.vue'
+import Admin from '../views/Admin.vue'
 
-const base = '/-vue-w2'
+const base = '/vue-ec-website-mission'
 
 let history = createWebHistory()
 let routes = [
