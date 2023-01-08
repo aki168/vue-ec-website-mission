@@ -17,6 +17,7 @@ const loading = ref(false)
 const loadingEdit = ref(false)
 
 const pickOneImgPath = ref('')
+const borderImgId = ref(null)
 const newOneImgPath = ref('')
 
 const onEditProduct = ref({})
@@ -41,10 +42,14 @@ const addParams = reactive({
 })
 
 // methods
-
-function pickOneImg(event) {
-  let imgPath = event.target.alt
-  pickOneImgPath.value = imgPath
+function pickOneImg(_index, event) {
+  // let imgPath = event.target.alt
+  let obj = { ...onEditProduct.value }
+  let imgPaths = [...obj.imagesUrl]
+  // pickOneImgPath.value = imgPaths[_index]
+  borderImgId.value = event.target.id
+  console.log(event.target.id)
+  console.log('index',pickOneImgPath.value)
 }
 
 function onAddOneImg() {
@@ -56,24 +61,16 @@ function onAddOneImg() {
 
 function onDelOneImg() {
   let obj = { ...onEditProduct.value }
+  let _index = Number(borderImgId.value)
   let imagesUrl = [...obj.imagesUrl]
-  let newImagesUrl = imagesUrl.filter(item => item !== pickOneImgPath.value)
-  onEditProduct.value = { ...obj, imagesUrl: newImagesUrl }
+  imagesUrl.splice(Number(_index), 1)
+  onEditProduct.value = { ...obj, imagesUrl }
   delOneImg(onEditProduct.value.id)
 }
 
 function onEdit(clickItem) {
   editDialog.value = true
   onEditProduct.value = { ...clickItem }
-  // console.log({ ...onEditProduct.value })
-}
-
-function chengeOnAddImg(){
-  onAddOneImg()
-}
-
-function chengeOnDelImg() {
-  confirmDelImgDialog.value = true
 }
 
 async function delOneImg(id) {
@@ -84,7 +81,7 @@ async function delOneImg(id) {
     confirmDelImgDialog.value = false
     setTimeout(() => {
       loadingEdit.value = false
-    },1500)
+    }, 1500)
   })
     .catch(err => {
       alert(err.response.data.message)
@@ -96,7 +93,7 @@ async function addOneImg(id) {
   let paramsObj = { data: { ...onEditProduct.value } }
   await axios.put(url, paramsObj).then((res) => {
     alert(res.data.message)
-    newOneImgPath.value=''
+    newOneImgPath.value = ''
   })
     .catch(err => {
       alert(err.response.data.message)
@@ -115,8 +112,8 @@ async function getData() {
   loading.value = false
 }
 
-async function submitEditSheet(){
-  let temp = {...onEditProduct.value}
+async function submitEditSheet() {
+  let temp = { ...onEditProduct.value }
   let id = temp.id
   let paramsObj = { data: { ...onEditProduct.value } }
   const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
@@ -331,16 +328,19 @@ onMounted(() => {
                   <img :src="onEditProduct.imageUrl" :alt="onEditProduct.imageUrl" />
                 </div>
                 <div class="d-flex gap-2 mb-2">
-                  <v-btn color="green" small @click="chengeOnAddImg">
+                  <v-btn color="green" small @click="onAddOneImg">
                     新增圖片
                   </v-btn>
-                  <v-btn color="red" small @click="chengeOnDelImg">
+                  <v-btn color="red" small @click="confirmDelImgDialog = true">
                     刪除圖片
                   </v-btn>
                 </div>
-                <img @click="pickOneImg" v-for="image in onEditProduct.imagesUrl" class="img-fluid mb-1"
-                  :class="{ sepia: pickOneImgPath === image, shadow: pickOneImgPath === image }" :src="image"
-                  :alt="image">
+                <div v-for="(image, index) in onEditProduct.imagesUrl"
+                  :class="{ delOneImg: Number(borderImgId) === index && borderImgId }" 
+                  @click="(e) => pickOneImg(index, e)">
+                  <img class="img-fluid mb-1" :src="image" :id="index"
+                    :alt="image">
+                </div>
               </div>
               <div class="col-sm-8">
                 <div class="mb-3">
@@ -368,10 +368,11 @@ onMounted(() => {
                 <hr>
 
                 <div class="mb-3">
-                  <v-textarea v-model="onEditProduct.description" label="產品描述" placeholder="請輸入產品描述" variant="underlined"/>
+                  <v-textarea v-model="onEditProduct.description" label="產品描述" placeholder="請輸入產品描述"
+                    variant="underlined" />
                 </div>
                 <div class="mb-3">
-                  <v-textarea v-model="onEditProduct.content" label="說明內容" placeholder="請輸入說明內容" variant="underlined"/>
+                  <v-textarea v-model="onEditProduct.content" label="說明內容" placeholder="請輸入說明內容" variant="underlined" />
                 </div>
                 <div class="mb-3">
                   <div class="form-check">
@@ -419,18 +420,5 @@ onMounted(() => {
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-
-
-
   </div>
-
-
 </template>
-
-
-
-
-<style scoped>
-
-</style>
