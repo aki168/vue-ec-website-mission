@@ -13,9 +13,11 @@ const dialog = ref(false)
 const delDialog = ref(false)
 const editDialog = ref(false)
 const confirmDelImgDialog = ref(false)
+const confirmRemoveOne = ref(false)
 const loading = ref(false)
 const loadingEdit = ref(false)
 
+const removeId = ref(null)
 const borderImgId = ref(null)
 const newOneImgPath = ref('')
 const newMainImgPath = ref('')
@@ -62,22 +64,18 @@ function addSetDelImg() {
   let obj = { ...addParams }
   let imagesUrl = [...obj.imagesUrl]
   let _index = Number(borderImgId.value)
-  console.log(imagesUrl)
   imagesUrl.splice(_index, 1)
   addParams.imagesUrl = imagesUrl
 }
 
-// function onDelOneImgAdd() {
-//   let obj = { ...addParams.value }
-//   let _index = Number(borderImgId.value)
-//   let imagesUrl = [...obj.imagesUrl]
-//   imagesUrl.splice(Number(_index), 1)
-//   addParams.value = { ...obj, imagesUrl }
-// }
-
 function onEdit(clickItem) {
   editDialog.value = true
   onEditProduct.value = { ...clickItem }
+}
+
+function onRemoveOne(id) {
+  confirmRemoveOne.value = true
+  removeId.value = id
 }
 
 async function delOneImg(id) {
@@ -88,7 +86,7 @@ async function delOneImg(id) {
     confirmDelImgDialog.value = false
     setTimeout(() => {
       loadingEdit.value = false
-    }, 1500)
+    }, 1000)
   })
     .catch(err => {
       alert(err.response.data.message)
@@ -129,7 +127,12 @@ async function submitEditSheet() {
     editDialog.value = false
   })
     .catch(err => {
-      alert(err.response.data.message)
+      let msg = err.response?.data?.message;
+      let resMsg = JSON.stringify(msg)
+      .replace(/title 屬性/i , '產品標題')
+      .replace(/category 屬性/i , '分類')
+      .replace(/unit 屬性/i , '單位');
+      alert(resMsg)
     })
 }
 
@@ -148,7 +151,7 @@ async function editMainImg() {
 }
 
 async function addOne() {
-  // 將proxy物件target的值取出，再進行淺拷貝
+  //將proxy物件target的值取出，再進行淺拷貝
   let paramsObj = { data: { ...addParams } }
   const url = `${apiUrl}/api/${apiPath}/admin/product`;
   await axios.post(url, paramsObj).then((res) => {
@@ -158,9 +161,27 @@ async function addOne() {
     reset()
   })
     .catch(err => {
-      alert(err)
+      let msg = err.response?.data?.message;
+      let resMsg = JSON.stringify(msg)
+      .replace(/title 屬性/i , '產品標題')
+      .replace(/category 屬性/i , '分類')
+      .replace(/unit 屬性/i , '單位');
+      alert(resMsg)
     })
+}
 
+async function removeOne() {
+  let id =  removeId.value
+  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
+  await axios.delete(url)
+    .then((res) => {
+      confirmRemoveOne.value = false
+      removeId.value = null
+      getData()
+    })
+    .catch(err => {
+      alert(err.response?.data?.message)
+    })
 }
 
 onMounted(() => {
@@ -172,37 +193,33 @@ onMounted(() => {
 
 // watch()中第一個參數為觀察ref物件，第二個參數為一個callBack，
 // 當狀態更新，就會針對其來執行callback。
-
-function reset (){
+function reset() {
   borderImgId.value = null
   newMainImgPath.value = ''
   newOneImgPath.value = ''
   getData()
-  console.log('觸發reset',borderImgId.value)
 }
 
-function clearAddSheet(){
+function clearAddSheet() {
   let init = () => ({
-  title: "",
-  category: "",
-  origin_price: 0,
-  price: 0,
-  unit: "",
-  description: "",
-  content: "",
-  is_enabled: 1,
-  imageUrl: "",
-  imagesUrl: []
+    title: "",
+    category: "",
+    origin_price: 0,
+    price: 0,
+    unit: "",
+    description: "",
+    content: "",
+    is_enabled: 1,
+    imageUrl: "",
+    imagesUrl: []
   })
   addParams.value = init()
 }
 
 watch(editDialog, reset)
-watch(dialog, reset)
 watch(confirmDelImgDialog, reset)
 watch(confirmDelImgDialog, clearAddSheet)
 watch(addParams, () => { borderImgId.value = null })
-
 </script>
 
 <template>
@@ -252,7 +269,7 @@ watch(addParams, () => { borderImgId.value = null })
             <v-btn color="blue" @click="onEdit(item)">
               編輯
             </v-btn>
-            <v-btn color="red" @click="delDialog = !delDialog.value">
+            <v-btn color="red" @click="onRemoveOne(item.id)">
               刪除
             </v-btn>
           </td>
@@ -281,22 +298,16 @@ watch(addParams, () => { borderImgId.value = null })
           <v-btn @click="delDialog = false">
             取消
           </v-btn>
-          <v-btn color="red" @click="delDialog = false">
+          <v-btn color="red" @click="removeOne">
             確認刪除
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-
     <!-- dialog 新增產品 -->
     <v-dialog v-model="dialog" width="800">
       <v-card>
-        <!-- <div v-if="loadingEdit === true" class="flex justify-center py-2">
-          <v-progress-circular class="block" color="blue-lighten-3" indeterminate :size="68"
-            :width="5"></v-progress-circular>
-        </div> -->
-        <!-- <template v-if="loadingEdit === false"> -->
         <v-card-title class="text-h5 grey lighten-2">
           新增產品
         </v-card-title>
@@ -314,13 +325,11 @@ watch(addParams, () => { borderImgId.value = null })
                 </div>
                 <img :src="newMainImgPath" :alt="newMainImgPath" />
               </div>
-              <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
+              <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結"/>
               <div class="d-flex gap-2 mb-2">
-                <v-btn color="green" small
-                @click="() => {
+                <v-btn color="green" small @click="() => {
                   addParams.imagesUrl.push(newOneImgPath)
-                }"
-                >
+                }">
                   新增圖片
                 </v-btn>
                 <v-btn v-if="addParams.imagesUrl" color="red" small @click="addSetDelImg">
@@ -328,21 +337,22 @@ watch(addParams, () => { borderImgId.value = null })
                 </v-btn>
               </div>
               <div v-for="(image, index) in addParams.imagesUrl"
-                :class="{ delOneImg: borderImgId && Number(borderImgId) === index }" @click="borderImgId = index">
+                :class="{ delOneImg: borderImgId !== null && Number(borderImgId) === index }" @click="borderImgId = index">
                 <img class="img-fluid mb-1" :src="image" :id="index" :alt="image">
               </div>
             </div>
             <div class="col-sm-8">
               <div class="mb-3">
-                <v-text-field v-model="addParams.title" label="標題" placeholder="請輸入標題" />
+                <v-text-field v-model="addParams.title" label="產品標題(必填)" placeholder="請輸入標題"
+                :rules="[ v => !!v || '必填']"/>
               </div>
 
               <div class="row">
                 <div class="mb-3 col-md-6">
-                  <v-text-field v-model="addParams.category" label="分類" placeholder="請輸入分類" />
+                  <v-text-field v-model="addParams.category" label="分類(必填)" placeholder="請輸入分類" />
                 </div>
                 <div class="mb-3 col-md-6">
-                  <v-text-field v-model="addParams.unit" label="單位" placeholder="請輸入單位" />
+                  <v-text-field v-model="addParams.unit" label="單位(必填)" placeholder="請輸入單位" />
                 </div>
               </div>
 
@@ -381,7 +391,6 @@ watch(addParams, () => { borderImgId.value = null })
             確認
           </v-btn>
         </v-card-actions>
-        <!-- </template> -->
       </v-card>
     </v-dialog>
 
@@ -427,7 +436,7 @@ watch(addParams, () => { borderImgId.value = null })
               </div>
               <div class="col-sm-8">
                 <div class="mb-3">
-                  <v-text-field v-model="onEditProduct.title" label="標題" placeholder="請輸入標題" />
+                  <v-text-field v-model="onEditProduct.title" label="產品標題" placeholder="請輸入標題" />
                 </div>
 
                 <div class="row">
@@ -501,6 +510,30 @@ watch(addParams, () => { borderImgId.value = null })
             取消
           </v-btn>
           <v-btn v-if="borderImgId" color="red" @click="onDelOneImg">
+            確認刪除
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- dialog 是否刪除產品?  -->
+    <v-dialog v-model="confirmRemoveOne" width="500">
+      <v-card>
+        <div class="bg-danger text-white">
+          <v-card-title class="text-h5 grey lighten-2">
+            <span>刪除產品</span>
+          </v-card-title>
+        </div>
+        <v-card-text>
+          是否刪除
+          <strong class="text-danger">商品(刪除後將無法恢復)。</strong>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="confirmRemoveOne = false">
+            取消
+          </v-btn>
+          <v-btn color="red" @click="removeOne">
             確認刪除
           </v-btn>
         </v-card-actions>
