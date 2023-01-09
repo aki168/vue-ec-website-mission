@@ -45,6 +45,9 @@ function pickOneImg(_index, event) {
 }
 
 function onAddOneImg() {
+  if(!newOneImgPath.value){
+    return alert('請輸入圖片網址')
+  }
   let obj = { ...onEditProduct.value }
   let imgArr = Array.isArray(obj?.imagesUrl) ? [...obj.imagesUrl, newOneImgPath.value] : []
   onEditProduct.value = { ...obj, imagesUrl: imgArr }
