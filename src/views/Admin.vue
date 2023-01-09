@@ -40,7 +40,7 @@ const addParams = reactive({
 // methods
 function pickOneImg(_index, event) {
   let obj = { ...onEditProduct.value }
-  let imgPaths = [...obj.imagesUrl]
+  // let imgPaths = [...obj.imagesUrl]
   borderImgId.value = event.target.id
 }
 
@@ -89,6 +89,7 @@ async function delOneImg(id) {
     confirmDelImgDialog.value = false
     setTimeout(() => {
       loadingEdit.value = false
+      borderImgId.value = null
     }, 1000)
   })
     .catch(err => {
@@ -201,7 +202,6 @@ onMounted(() => {
 // watch()中第一個參數為觀察ref物件，第二個參數為一個callBack，
 // 當狀態更新，就會針對其來執行callback。
 function reset() {
-  borderImgId.value = null
   newMainImgPath.value = ''
   newOneImgPath.value = ''
   getData()
@@ -226,7 +226,7 @@ function clearAddSheet() {
 watch(editDialog, reset)
 watch(confirmDelImgDialog, reset)
 watch(confirmDelImgDialog, clearAddSheet)
-watch(addParams, () => { borderImgId.value = null })
+
 </script>
 
 <template>
