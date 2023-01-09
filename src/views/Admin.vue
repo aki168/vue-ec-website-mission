@@ -45,7 +45,7 @@ function pickOneImg(_index, event) {
 }
 
 function onAddOneImg() {
-  if(!newOneImgPath.value){
+  if (!newOneImgPath.value) {
     return alert('請輸入圖片網址')
   }
   let obj = { ...onEditProduct.value }
@@ -132,21 +132,25 @@ async function submitEditSheet() {
     .catch(err => {
       let msg = err.response?.data?.message;
       let resMsg = JSON.stringify(msg)
-      .replace(/title 屬性/i , '產品標題')
-      .replace(/category 屬性/i , '分類')
-      .replace(/unit 屬性/i , '單位');
+        .replace(/title 屬性/i, '產品標題')
+        .replace(/category 屬性/i, '分類')
+        .replace(/unit 屬性/i, '單位');
       alert(resMsg)
     })
 }
 
 async function editMainImg() {
+  loadingEdit.value = true
   let temp = { ...onEditProduct.value }
   let id = temp.id
   let paramsObj = { data: { ...onEditProduct.value, imageUrl: newMainImgPath.value } }
   const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
   await axios.put(url, paramsObj).then((res) => {
     alert(res.data.message)
-    editDialog.value = false
+    setTimeout(() => {
+      loadingEdit.value = false
+      getData()
+    }, 1000)
   })
     .catch(err => {
       alert(err.response.data.message)
@@ -166,15 +170,15 @@ async function addOne() {
     .catch(err => {
       let msg = err.response?.data?.message;
       let resMsg = JSON.stringify(msg)
-      .replace(/title 屬性/i , '產品標題')
-      .replace(/category 屬性/i , '分類')
-      .replace(/unit 屬性/i , '單位');
+        .replace(/title 屬性/i, '產品標題')
+        .replace(/category 屬性/i, '分類')
+        .replace(/unit 屬性/i, '單位');
       alert(resMsg)
     })
 }
 
 async function removeOne() {
-  let id =  removeId.value
+  let id = removeId.value
   const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
   await axios.delete(url)
     .then((res) => {
@@ -321,14 +325,14 @@ watch(addParams, () => { borderImgId.value = null })
                 <div class="mb-3">
                   <v-text-field v-model="addParams.imageUrl" label="主要圖片網址" placeholder="請輸入主圖連結" />
                   <div class="d-flex gap-2 mb-2">
-                    <v-btn color="green" small @click="newMainImgPath = addParams.imageUrl">
+                    <!-- <v-btn color="green" small @click="newMainImgPath = addParams.imageUrl">
                       新增主要圖片
-                    </v-btn>
+                    </v-btn> -->
                   </div>
                 </div>
-                <img :src="newMainImgPath" :alt="newMainImgPath" />
+                <img :src="addParams.imageUrl.length > 5 ? addParams.imageUrl : 'https://fakeimg.pl/350x200/?text=preview' " :alt="addParams.imageUrl" />
               </div>
-              <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結"/>
+              <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
               <div class="d-flex gap-2 mb-2">
                 <v-btn color="green" small @click="() => {
                   addParams.imagesUrl.push(newOneImgPath)
@@ -340,14 +344,15 @@ watch(addParams, () => { borderImgId.value = null })
                 </v-btn>
               </div>
               <div v-for="(image, index) in addParams.imagesUrl"
-                :class="{ delOneImg: borderImgId !== null && Number(borderImgId) === index }" @click="borderImgId = index">
+                :class="{ delOneImg: borderImgId !== null && Number(borderImgId) === index }"
+                @click="borderImgId = index">
                 <img class="img-fluid mb-1" :src="image" :id="index" :alt="image">
               </div>
             </div>
             <div class="col-sm-8">
               <div class="mb-3">
                 <v-text-field v-model="addParams.title" label="產品標題(必填)" placeholder="請輸入標題"
-                :rules="[ v => !!v || '必填']"/>
+                  :rules="[v => !!v || '必填']" />
               </div>
 
               <div class="row">
@@ -413,14 +418,14 @@ watch(addParams, () => { borderImgId.value = null })
               <div class="col-sm-4">
                 <div class="mb-2">
                   <div class="mb-3">
-                    <v-text-field v-model="newMainImgPath" label="主要圖片網址" placeholder="請輸入主圖連結" />
+                    <v-text-field v-model="onEditProduct.imageUrl" label="主要圖片網址" placeholder="請輸入主圖連結" />
                     <div class="d-flex gap-2 mb-2">
-                      <v-btn color="green" small @click="editMainImg">
+                      <!-- <v-btn color="green" small @click="editMainImg">
                         修改主要圖片
-                      </v-btn>
+                      </v-btn> -->
                     </div>
                   </div>
-                  <img :src="onEditProduct.imageUrl" :alt="onEditProduct.imageUrl" />
+                  <img :src="onEditProduct.imageUrl.length > 5 ? onEditProduct.imageUrl : 'https://fakeimg.pl/350x200/?text=preview' " :alt="onEditProduct.imageUrl" />
                 </div>
                 <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
                 <div class="d-flex gap-2 mb-2">
