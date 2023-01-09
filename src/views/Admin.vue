@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, reactive, watch } from 'vue';
 import axios from 'axios';
 import logout from '@/mixins/logout';
 import checkAdmin from '@/mixins/checkAdmin';
@@ -16,7 +16,6 @@ const confirmDelImgDialog = ref(false)
 const loading = ref(false)
 const loadingEdit = ref(false)
 
-const pickOneImgPath = ref('')
 const borderImgId = ref(null)
 const newOneImgPath = ref('')
 const newMainImgPath = ref('')
@@ -33,24 +32,14 @@ const addParams = reactive({
   content: "",
   is_enabled: 1,
   imageUrl: "",
-  imagesUrl: [
-    "",
-    "",
-    "",
-    "",
-    ""
-  ]
+  imagesUrl: []
 })
 
 // methods
 function pickOneImg(_index, event) {
-  // let imgPath = event.target.alt
   let obj = { ...onEditProduct.value }
   let imgPaths = [...obj.imagesUrl]
-  // pickOneImgPath.value = imgPaths[_index]
   borderImgId.value = event.target.id
-  console.log(event.target.id)
-  console.log('index', pickOneImgPath.value)
 }
 
 function onAddOneImg() {
@@ -64,10 +53,27 @@ function onDelOneImg() {
   let obj = { ...onEditProduct.value }
   let _index = Number(borderImgId.value)
   let imagesUrl = [...obj.imagesUrl]
-  imagesUrl.splice(Number(_index), 1)
+  imagesUrl.splice(_index, 1)
   onEditProduct.value = { ...obj, imagesUrl }
   delOneImg(onEditProduct.value.id)
 }
+
+function addSetDelImg() {
+  let obj = { ...addParams }
+  let imagesUrl = [...obj.imagesUrl]
+  let _index = Number(borderImgId.value)
+  console.log(imagesUrl)
+  imagesUrl.splice(_index, 1)
+  addParams.imagesUrl = imagesUrl
+}
+
+// function onDelOneImgAdd() {
+//   let obj = { ...addParams.value }
+//   let _index = Number(borderImgId.value)
+//   let imagesUrl = [...obj.imagesUrl]
+//   imagesUrl.splice(Number(_index), 1)
+//   addParams.value = { ...obj, imagesUrl }
+// }
 
 function onEdit(clickItem) {
   editDialog.value = true
@@ -82,7 +88,6 @@ async function delOneImg(id) {
     confirmDelImgDialog.value = false
     setTimeout(() => {
       loadingEdit.value = false
-      borderImgId.value = null
     }, 1500)
   })
     .catch(err => {
@@ -96,7 +101,6 @@ async function addOneImg(id) {
   await axios.put(url, paramsObj).then((res) => {
     alert(res.data.message)
     newOneImgPath.value = ''
-    borderImgId.value = null
   })
     .catch(err => {
       alert(err.response.data.message)
@@ -123,8 +127,6 @@ async function submitEditSheet() {
   await axios.put(url, paramsObj).then((res) => {
     alert(res.data.message)
     editDialog.value = false
-    borderImgId.value = null
-    getData()
   })
     .catch(err => {
       alert(err.response.data.message)
@@ -139,8 +141,6 @@ async function editMainImg() {
   await axios.put(url, paramsObj).then((res) => {
     alert(res.data.message)
     editDialog.value = false
-    borderImgId.value = null
-    getData()
   })
     .catch(err => {
       alert(err.response.data.message)
@@ -149,10 +149,13 @@ async function editMainImg() {
 
 async function addOne() {
   // 將proxy物件target的值取出，再進行淺拷貝
-  let paramsObj = { data: { ...addParams.value } }
+  let paramsObj = { data: { ...addParams } }
   const url = `${apiUrl}/api/${apiPath}/admin/product`;
   await axios.post(url, paramsObj).then((res) => {
     alert(res.data.message)
+    dialog.value = false
+    clearAddSheet()
+    reset()
   })
     .catch(err => {
       alert(err)
@@ -166,6 +169,40 @@ onMounted(() => {
   checkAdmin()
   getData()
 })
+
+// watch()中第一個參數為觀察ref物件，第二個參數為一個callBack，
+// 當狀態更新，就會針對其來執行callback。
+
+function reset (){
+  borderImgId.value = null
+  newMainImgPath.value = ''
+  newOneImgPath.value = ''
+  getData()
+  console.log('觸發reset',borderImgId.value)
+}
+
+function clearAddSheet(){
+  let init = () => ({
+  title: "",
+  category: "",
+  origin_price: 0,
+  price: 0,
+  unit: "",
+  description: "",
+  content: "",
+  is_enabled: 1,
+  imageUrl: "",
+  imagesUrl: []
+  })
+  addParams.value = init()
+}
+
+watch(editDialog, reset)
+watch(dialog, reset)
+watch(confirmDelImgDialog, reset)
+watch(confirmDelImgDialog, clearAddSheet)
+watch(addParams, () => { borderImgId.value = null })
+
 </script>
 
 <template>
@@ -254,9 +291,12 @@ onMounted(() => {
 
     <!-- dialog 新增產品 -->
     <v-dialog v-model="dialog" width="800">
-      <!-- <template v-slot:activator="{ on, attrs }">
-      </template> -->
       <v-card>
+        <!-- <div v-if="loadingEdit === true" class="flex justify-center py-2">
+          <v-progress-circular class="block" color="blue-lighten-3" indeterminate :size="68"
+            :width="5"></v-progress-circular>
+        </div> -->
+        <!-- <template v-if="loadingEdit === false"> -->
         <v-card-title class="text-h5 grey lighten-2">
           新增產品
         </v-card-title>
@@ -265,17 +305,31 @@ onMounted(() => {
             <div class="col-sm-4">
               <div class="mb-2">
                 <div class="mb-3">
-                  <v-text-field label="圖片網址" placeholder="請輸入圖片連結" />
+                  <v-text-field v-model="addParams.imageUrl" label="主要圖片網址" placeholder="請輸入主圖連結" />
+                  <div class="d-flex gap-2 mb-2">
+                    <v-btn color="green" small @click="newMainImgPath = addParams.imageUrl">
+                      新增主要圖片
+                    </v-btn>
+                  </div>
                 </div>
-                <img class="img-fluid" src="" alt="">
+                <img :src="newMainImgPath" :alt="newMainImgPath" />
               </div>
-              <div class="d-flex gap-2">
-                <v-btn color="green" small>
+              <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
+              <div class="d-flex gap-2 mb-2">
+                <v-btn color="green" small
+                @click="() => {
+                  addParams.imagesUrl.push(newOneImgPath)
+                }"
+                >
                   新增圖片
                 </v-btn>
-                <v-btn color="red" small>
+                <v-btn v-if="addParams.imagesUrl" color="red" small @click="addSetDelImg">
                   刪除圖片
                 </v-btn>
+              </div>
+              <div v-for="(image, index) in addParams.imagesUrl"
+                :class="{ delOneImg: borderImgId && Number(borderImgId) === index }" @click="borderImgId = index">
+                <img class="img-fluid mb-1" :src="image" :id="index" :alt="image">
               </div>
             </div>
             <div class="col-sm-8">
@@ -303,10 +357,10 @@ onMounted(() => {
               <hr>
 
               <div class="mb-3">
-                <v-textarea v-model="addParams.description" label="產品描述" placeholder="請輸入產品描述" />
+                <v-textarea v-model="addParams.description" label="產品描述" placeholder="請輸入產品描述" variant="underlined" />
               </div>
               <div class="mb-3">
-                <v-textarea v-model="addParams.content" label="說明內容" placeholder="請輸入說明內容" />
+                <v-textarea v-model="addParams.content" label="說明內容" placeholder="請輸入說明內容" variant="underlined" />
               </div>
               <div class="mb-3">
                 <div class="form-check">
@@ -320,13 +374,14 @@ onMounted(() => {
         <v-divider></v-divider>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="red" @click="dialog = false">
+          <v-btn color="red" @click="editDialog = false">
             取消
           </v-btn>
           <v-btn color="green" @click="addOne">
             確認
           </v-btn>
         </v-card-actions>
+        <!-- </template> -->
       </v-card>
     </v-dialog>
 
@@ -353,21 +408,19 @@ onMounted(() => {
                       </v-btn>
                     </div>
                   </div>
-                  <img :src="onEditProduct.imageUrl" :alt="onEditProduct.imageUrl"
-                    :class="{ delOneImg: Number(borderImgId) === index && borderImgId }" />
+                  <img :src="onEditProduct.imageUrl" :alt="onEditProduct.imageUrl" />
                 </div>
                 <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
                 <div class="d-flex gap-2 mb-2">
                   <v-btn color="green" small @click="onAddOneImg">
                     新增圖片
                   </v-btn>
-                  <v-btn v-if="onEditProduct.imagesUrl" color="red" small
-                    @click="confirmDelImgDialog = true">
+                  <v-btn v-if="onEditProduct.imagesUrl" color="red" small @click="confirmDelImgDialog = true">
                     刪除圖片
                   </v-btn>
                 </div>
                 <div v-for="(image, index) in onEditProduct.imagesUrl"
-                  :class="{ delOneImg: Number(borderImgId) === index && borderImgId }"
+                  :class="{ delOneImg: borderImgId && Number(borderImgId) === index }"
                   @click="(e) => pickOneImg(index, e)">
                   <img class="img-fluid mb-1" :src="image" :id="index" :alt="image">
                 </div>
@@ -427,7 +480,7 @@ onMounted(() => {
       </v-card>
     </v-dialog>
 
-    <!-- dialog 是否刪除產品單圖? -->
+    <!-- dialog 是否刪除產品單圖?  -->
     <v-dialog v-model="confirmDelImgDialog" width="500">
       <v-card>
         <div class="bg-danger text-white">
