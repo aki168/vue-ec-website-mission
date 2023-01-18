@@ -152,7 +152,6 @@ const onRemoveOne = (item) => {
 const delOneImg = async (id) => {
   loadingEdit.value = true
   const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
-  // let paramsObj = { data: { ...onEditProduct.value } }
   await axios.put(url, { data: onEditProduct.value }).then((res) => {
     confirmDelImgDialog.value = false
     setTimeout(() => {
