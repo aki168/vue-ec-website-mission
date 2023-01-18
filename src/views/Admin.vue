@@ -7,23 +7,29 @@ import checkAdmin from '@/mixins/checkAdmin';
 const apiUrl = 'https://vue3-course-api.hexschool.io/v2';
 const apiPath = 'cryptalk';
 
-// data
-let desserts = ref([])
-const dialog = ref(false)
-const delDialog = ref(false)
-const editDialog = ref(false)
-const confirmDelImgDialog = ref(false)
-const confirmRemoveOne = ref(false)
+// init & wrap
+const products = ref([])
 const loading = ref(false)
-const loadingEdit = ref(false)
+const getData = async () => {
+  loading.value = true
+  const url = `${apiUrl}/api/${apiPath}/admin/products`;
+  await axios.get(url).then((res) => {
+    products.value = res.data.products
+  })
+    .catch(err => {
+      alert(err.response.data.message)
+    })
+  loading.value = false
+}
+onMounted(() => {
+  const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
+  axios.defaults.headers.common.Authorization = token;
+  checkAdmin()
+  getData()
+})
 
-const removeId = ref(null)
-const borderImgId = ref(null)
-const newOneImgPath = ref('')
-const newMainImgPath = ref('')
-
-const onEditProduct = ref({})
-
+// Create
+const dialog = ref(false)
 const addParams = reactive({
   title: "",
   category: "",
@@ -36,131 +42,8 @@ const addParams = reactive({
   imageUrl: "",
   imagesUrl: []
 })
-
-// methods
-function pickOneImg(_index, event) {
-  let obj = { ...onEditProduct.value }
-  // let imgPaths = [...obj.imagesUrl]
-  borderImgId.value = event.target.id
-}
-
-function onAddOneImg() {
-  if (!newOneImgPath.value) {
-    return alert('請輸入圖片網址')
-  }
-  let obj = { ...onEditProduct.value }
-  let imgArr = Array.isArray(obj?.imagesUrl) ? [...obj.imagesUrl, newOneImgPath.value] : []
-  onEditProduct.value = { ...obj, imagesUrl: imgArr }
-  addOneImg(onEditProduct.value.id)
-}
-
-function onDelOneImg() {
-  let obj = { ...onEditProduct.value }
-  let _index = Number(borderImgId.value)
-  let imagesUrl = [...obj.imagesUrl]
-  imagesUrl.splice(_index, 1)
-  onEditProduct.value = { ...obj, imagesUrl }
-  delOneImg(onEditProduct.value.id)
-}
-
-function addSetDelImg() {
-  let obj = { ...addParams }
-  let imagesUrl = [...obj.imagesUrl]
-  let _index = Number(borderImgId.value)
-  imagesUrl.splice(_index, 1)
-  addParams.imagesUrl = imagesUrl
-}
-
-function onEdit(clickItem) {
-  editDialog.value = true
-  onEditProduct.value = { ...clickItem }
-}
-
-function onRemoveOne(id) {
-  confirmRemoveOne.value = true
-  removeId.value = id
-}
-
-async function delOneImg(id) {
-  loadingEdit.value = true
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
-  let paramsObj = { data: { ...onEditProduct.value } }
-  await axios.put(url, paramsObj).then((res) => {
-    confirmDelImgDialog.value = false
-    setTimeout(() => {
-      loadingEdit.value = false
-      borderImgId.value = null
-    }, 1000)
-  })
-    .catch(err => {
-      alert(err.response.data.message)
-    })
-}
-
-async function addOneImg(id) {
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
-  let paramsObj = { data: { ...onEditProduct.value } }
-  await axios.put(url, paramsObj).then((res) => {
-    alert(res.data.message)
-    newOneImgPath.value = ''
-  })
-    .catch(err => {
-      alert(err.response.data.message)
-    })
-}
-
-async function getData() {
-  loading.value = true
-  const url = `${apiUrl}/api/${apiPath}/admin/products`;
-  await axios.get(url).then((res) => {
-    desserts.value = res.data.products
-  })
-    .catch(err => {
-      alert(err.response.data.message)
-    })
-  loading.value = false
-}
-
-async function submitEditSheet() {
-  let temp = { ...onEditProduct.value }
-  let id = temp.id
-  let paramsObj = { data: { ...onEditProduct.value } }
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
-  await axios.put(url, paramsObj).then((res) => {
-    alert(res.data.message)
-    editDialog.value = false
-  })
-    .catch(err => {
-      let msg = err.response?.data?.message;
-      let resMsg = JSON.stringify(msg)
-        .replace(/title 屬性/i, '產品標題')
-        .replace(/category 屬性/i, '分類')
-        .replace(/unit 屬性/i, '單位');
-      alert(resMsg)
-    })
-}
-
-async function editMainImg() {
-  loadingEdit.value = true
-  let temp = { ...onEditProduct.value }
-  let id = temp.id
-  let paramsObj = { data: { ...onEditProduct.value, imageUrl: newMainImgPath.value } }
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
-  await axios.put(url, paramsObj).then((res) => {
-    alert(res.data.message)
-    setTimeout(() => {
-      loadingEdit.value = false
-      getData()
-    }, 1000)
-  })
-    .catch(err => {
-      alert(err.response.data.message)
-    })
-}
-
-async function addOne() {
-  //將proxy物件target的值取出，再進行淺拷貝
-  let paramsObj = { data: { ...addParams } }
+const addOne = async() => {
+  let paramsObj = { data: addParams }
   const url = `${apiUrl}/api/${apiPath}/admin/product`;
   await axios.post(url, paramsObj).then((res) => {
     alert(res.data.message)
@@ -178,13 +61,76 @@ async function addOne() {
     })
 }
 
-async function removeOne() {
-  let id = removeId.value
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
+// Remove
+const delDialog = ref(false)
+const confirmRemoveOne = ref(false)
+const removedOne = ref({})
+
+
+// Update
+const onEditProduct = ref({})
+const editDialog = ref(false)
+const confirmDelImgDialog = ref(false)
+const loadingEdit = ref(false)
+
+const submitEditSheet = async () => {
+  let temp = { ...onEditProduct.value }
+  const url = `${apiUrl}/api/${apiPath}/admin/product/${temp.id}`
+  await axios.put(url, { data: temp }).then((res) => {
+    alert(res.data.message)
+    editDialog.value = false
+    getData()
+  })
+    .catch(err => {
+      let msg = err.response?.data?.message;
+      let resMsg = JSON.stringify(msg)
+        .replace(/title 屬性/i, '產品標題')
+        .replace(/category 屬性/i, '分類')
+        .replace(/unit 屬性/i, '單位');
+      alert(resMsg)
+    })
+}
+
+// Update -images
+const borderImgId = ref(null)
+const newOneImgPath = ref('')
+const newMainImgPath = ref('')
+
+const onAddOneImg = () => {
+  if (!newOneImgPath.value) {
+    return alert('請輸入圖片網址')
+  }
+  let obj = { ...onEditProduct.value }
+  let imgArr = Array.isArray(obj?.imagesUrl) ? [...obj.imagesUrl, newOneImgPath.value] : []
+  onEditProduct.value = { ...obj, imagesUrl: imgArr }
+  addOneImg(onEditProduct.value.id)
+}
+
+const onDelOneImg = () => {
+  let obj = { ...onEditProduct.value }
+  let _index = Number(borderImgId.value)
+  let imagesUrl = [...obj.imagesUrl]
+  imagesUrl.splice(_index, 1)
+  onEditProduct.value = { ...obj, imagesUrl }
+  delOneImg(onEditProduct.value.id)
+}
+
+const addSetDelImg = () => {
+  let obj = { ...addParams }
+  let imagesUrl = [...obj.imagesUrl]
+  let _index = Number(borderImgId.value)
+  imagesUrl.splice(_index, 1)
+  addParams.imagesUrl = imagesUrl
+}
+
+
+// Delete
+const removeOne = async () => {
+  const url = `${apiUrl}/api/${apiPath}/admin/product/${removedOne.value.id}`
   await axios.delete(url)
     .then((res) => {
       confirmRemoveOne.value = false
-      removeId.value = null
+      removedOne.value = {}
       getData()
     })
     .catch(err => {
@@ -192,23 +138,56 @@ async function removeOne() {
     })
 }
 
-onMounted(() => {
-  const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
-  axios.defaults.headers.common.Authorization = token;
-  checkAdmin()
-  getData()
-})
+
+const onEdit = (clickItem) => {
+  editDialog.value = true
+  onEditProduct.value = { ...clickItem }
+}
+
+const onRemoveOne = (item) => {
+  confirmRemoveOne.value = true
+  removedOne.value = item
+}
+
+const delOneImg = async (id) => {
+  loadingEdit.value = true
+  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
+  // let paramsObj = { data: { ...onEditProduct.value } }
+  await axios.put(url, { data: onEditProduct.value }).then((res) => {
+    confirmDelImgDialog.value = false
+    setTimeout(() => {
+      loadingEdit.value = false
+      borderImgId.value = null
+    }, 1000)
+  })
+    .catch(err => {
+      alert(err.response.data.message)
+    })
+}
+
+const addOneImg = async (id) => {
+  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
+  let paramsObj = { data: { ...onEditProduct.value } }
+  await axios.put(url, paramsObj).then((res) => {
+    alert(res.data.message)
+    newOneImgPath.value = ''
+  })
+    .catch(err => {
+      alert(err.response.data.message)
+    })
+}
+
+
 
 // watch()中第一個參數為觀察ref物件，第二個參數為一個callBack，
 // 當狀態更新，就會針對其來執行callback。
-function reset() {
+const reset = () => {
   newMainImgPath.value = ''
   newOneImgPath.value = ''
   getData()
 }
-
-function clearAddSheet() {
-  let init = () => ({
+const clearAddSheet = () => {
+  addParams.value = {
     title: "",
     category: "",
     origin_price: 0,
@@ -219,18 +198,15 @@ function clearAddSheet() {
     is_enabled: 1,
     imageUrl: "",
     imagesUrl: []
-  })
-  addParams.value = init()
+  }
 }
-
-watch(editDialog, reset)
 watch(confirmDelImgDialog, reset)
 watch(confirmDelImgDialog, clearAddSheet)
 
 </script>
 
 <template>
-  <div class="text-center container vh-100">
+  <div class="text-center container min-vh-100">
     <nav class="p-2 d-flex">
       <v-btn @click="logout">
         登出
@@ -263,7 +239,7 @@ watch(confirmDelImgDialog, clearAddSheet)
         </tr>
       </thead>
       <tbody v-if="loading === false">
-        <tr v-for="item in desserts" :key="item.id">
+        <tr v-for="item in products" :key="item.id">
           <td class="text-center">{{ item.category }}</td>
           <td class="text-center">{{ item.title }}</td>
           <td class="text-center">{{ item.origin_price }}</td>
@@ -276,7 +252,7 @@ watch(confirmDelImgDialog, clearAddSheet)
             <v-btn color="blue" @click="onEdit(item)">
               編輯
             </v-btn>
-            <v-btn color="red" @click="onRemoveOne(item.id)">
+            <v-btn color="red" @click="onRemoveOne(item)">
               刪除
             </v-btn>
           </td>
@@ -298,7 +274,7 @@ watch(confirmDelImgDialog, clearAddSheet)
         </div>
         <v-card-text>
           是否刪除
-          <strong class="text-danger"></strong> 商品(刪除後將無法恢復)。
+          <strong class="text-danger"></strong> {{ removedOne.title }}商品(刪除後將無法恢復)。
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -325,12 +301,11 @@ watch(confirmDelImgDialog, clearAddSheet)
                 <div class="mb-3">
                   <v-text-field v-model="addParams.imageUrl" label="主要圖片網址" placeholder="請輸入主圖連結" />
                   <div class="d-flex gap-2 mb-2">
-                    <!-- <v-btn color="green" small @click="newMainImgPath = addParams.imageUrl">
-                      新增主要圖片
-                    </v-btn> -->
                   </div>
                 </div>
-                <img :src="addParams.imageUrl.length > 5 ? addParams.imageUrl : 'https://fakeimg.pl/350x200/?text=preview' " :alt="addParams.imageUrl" />
+                <img
+                  :src="addParams.imageUrl.length > 5 ? addParams.imageUrl : 'https://fakeimg.pl/350x200/?text=preview'"
+                  :alt="addParams.imageUrl" />
               </div>
               <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
               <div class="d-flex gap-2 mb-2">
@@ -392,7 +367,7 @@ watch(confirmDelImgDialog, clearAddSheet)
         <v-divider></v-divider>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="red" @click="editDialog = false">
+          <v-btn color="red" @click="dialog = false">
             取消
           </v-btn>
           <v-btn color="green" @click="addOne">
@@ -420,12 +395,11 @@ watch(confirmDelImgDialog, clearAddSheet)
                   <div class="mb-3">
                     <v-text-field v-model="onEditProduct.imageUrl" label="主要圖片網址" placeholder="請輸入主圖連結" />
                     <div class="d-flex gap-2 mb-2">
-                      <!-- <v-btn color="green" small @click="editMainImg">
-                        修改主要圖片
-                      </v-btn> -->
                     </div>
                   </div>
-                  <img :src="onEditProduct.imageUrl.length > 5 ? onEditProduct.imageUrl : 'https://fakeimg.pl/350x200/?text=preview' " :alt="onEditProduct.imageUrl" />
+                  <img
+                    :src="onEditProduct.imageUrl.length > 5 ? onEditProduct.imageUrl : 'https://fakeimg.pl/350x200/?text=preview'"
+                    :alt="onEditProduct.imageUrl" />
                 </div>
                 <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
                 <div class="d-flex gap-2 mb-2">
@@ -437,8 +411,7 @@ watch(confirmDelImgDialog, clearAddSheet)
                   </v-btn>
                 </div>
                 <div v-for="(image, index) in onEditProduct.imagesUrl"
-                  :class="{ delOneImg: borderImgId && Number(borderImgId) === index }"
-                  @click="(e) => pickOneImg(index, e)">
+                  :class="{ delOneImg: borderImgId === index }" @click="borderImgId = index">
                   <img class="img-fluid mb-1" :src="image" :id="index" :alt="image">
                 </div>
               </div>
