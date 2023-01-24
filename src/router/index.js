@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Home from '../views/Home.vue'
-import Products from '../views/Products.vue'
-import Admin from '../views/Admin.vue'
+import Home from '@/views/Home.vue'
+import Products from '@/views/Products.vue'
+import Admin from '@/views/Admin.vue'
+import Layout from "@/views/Layout.vue";
 
 const base = '/vue-ec-website-mission'
 
@@ -21,6 +22,11 @@ let routes = [
     path: `${base}/admin`,
     name: 'admin',
     component: Admin
+  },
+  {
+    path: `${base}/layout`,
+    name: 'layout',
+    component: Layout
   }
 ]
 

@@ -68,9 +68,6 @@ const addOne = async (item) => {
     })
 }
 
-// Delete
-const delDialog = ref(false)
-
 const editOne = async (item) => {
   let paramsObj = { data: item }
   const { id } = item
@@ -92,6 +89,7 @@ const editOne = async (item) => {
 }
 
 // Delete
+const delDialog = ref(false)
 const delOne = async (item) => {
   const url = `${apiUrl}/api/${apiPath}/admin/product/${item.id}`
   await axios.delete(url)
