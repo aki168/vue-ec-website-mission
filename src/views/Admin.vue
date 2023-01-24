@@ -1,11 +1,27 @@
 <script setup>
-import { ref, onMounted, reactive, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import logout from '@/mixins/logout';
 import checkAdmin from '@/mixins/checkAdmin';
+import detailDialog from '@/components/detail-dialog.vue';
+import confirmDelOneDialog from '@/components/confirm-del-one-dialog.vue';
 
 const apiUrl = 'https://vue3-course-api.hexschool.io/v2';
 const apiPath = 'cryptalk';
+
+const initVal = {
+  title: "",
+  category: "",
+  origin_price: 0,
+  price: 0,
+  unit: "",
+  description: "",
+  content: "",
+  is_enabled: 1,
+  imageUrl: "",
+  // imagesUrl: []
+}
+const dataSource = ref({...initVal, imagesUrl: []})
 
 // init & wrap
 const products = ref([])
@@ -14,7 +30,8 @@ const getData = async () => {
   loading.value = true
   const url = `${apiUrl}/api/${apiPath}/admin/products`;
   await axios.get(url).then((res) => {
-    products.value = res.data.products
+  let data = (res.data.products).map(item => item.imagesUrl? item : {...item, imagesUrl:[]})
+    products.value = data
   })
     .catch(err => {
       alert(err.response.data.message)
@@ -29,57 +46,17 @@ onMounted(() => {
 })
 
 // Create
+const mode = ref('addOne') // 'editOne'
 const dialog = ref(false)
-const addParams = reactive({
-  title: "",
-  category: "",
-  origin_price: 0,
-  price: 0,
-  unit: "",
-  description: "",
-  content: "",
-  is_enabled: 1,
-  imageUrl: "",
-  imagesUrl: []
-})
-const addOne = async() => {
-  let paramsObj = { data: addParams }
+
+const addOne = async (item) => {
+  let paramsObj = { data: item }
   const url = `${apiUrl}/api/${apiPath}/admin/product`;
   await axios.post(url, paramsObj).then((res) => {
     alert(res.data.message)
     dialog.value = false
-    clearAddSheet()
-    reset()
-  })
-    .catch(err => {
-      let msg = err.response?.data?.message;
-      let resMsg = JSON.stringify(msg)
-        .replace(/title 屬性/i, '產品標題')
-        .replace(/category 屬性/i, '分類')
-        .replace(/unit 屬性/i, '單位');
-      alert(resMsg)
-    })
-}
-
-// Remove
-const delDialog = ref(false)
-const confirmRemoveOne = ref(false)
-const removedOne = ref({})
-
-
-// Update
-const onEditProduct = ref({})
-const editDialog = ref(false)
-const confirmDelImgDialog = ref(false)
-const loadingEdit = ref(false)
-
-const submitEditSheet = async () => {
-  let temp = { ...onEditProduct.value }
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${temp.id}`
-  await axios.put(url, { data: temp }).then((res) => {
-    alert(res.data.message)
-    editDialog.value = false
     getData()
+    dataSource.value = { ...initVal, imagesUrl: []}
   })
     .catch(err => {
       let msg = err.response?.data?.message;
@@ -90,118 +67,46 @@ const submitEditSheet = async () => {
       alert(resMsg)
     })
 }
-
-// Update -images
-const borderImgId = ref(null)
-const newOneImgPath = ref('')
-const newMainImgPath = ref('')
-
-const onAddOneImg = () => {
-  if (!newOneImgPath.value) {
-    return alert('請輸入圖片網址')
-  }
-  let obj = { ...onEditProduct.value }
-  let imgArr = Array.isArray(obj?.imagesUrl) ? [...obj.imagesUrl, newOneImgPath.value] : []
-  onEditProduct.value = { ...obj, imagesUrl: imgArr }
-  addOneImg(onEditProduct.value.id)
-}
-
-const onDelOneImg = () => {
-  let obj = { ...onEditProduct.value }
-  let _index = Number(borderImgId.value)
-  let imagesUrl = [...obj.imagesUrl]
-  imagesUrl.splice(_index, 1)
-  onEditProduct.value = { ...obj, imagesUrl }
-  delOneImg(onEditProduct.value.id)
-}
-
-const addSetDelImg = () => {
-  let obj = { ...addParams }
-  let imagesUrl = [...obj.imagesUrl]
-  let _index = Number(borderImgId.value)
-  imagesUrl.splice(_index, 1)
-  addParams.imagesUrl = imagesUrl
-}
-
 
 // Delete
-const removeOne = async () => {
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${removedOne.value.id}`
+const delDialog = ref(false)
+
+const editOne = async (item) => {
+  let paramsObj = { data: item }
+  const { id } = item
+  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
+  await axios.put(url, paramsObj).then((res) => {
+    alert(res.data.message)
+    dialog.value = false
+    getData()
+    dataSource.value = { ...initVal, imagesUrl: []}
+  })
+    .catch(err => {
+      let msg = err.response?.data?.message;
+      let resMsg = JSON.stringify(msg)
+        .replace(/title 屬性/i, '產品標題')
+        .replace(/category 屬性/i, '分類')
+        .replace(/unit 屬性/i, '單位');
+      alert(resMsg)
+    })
+}
+
+// Delete
+const delOne = async (item) => {
+  const url = `${apiUrl}/api/${apiPath}/admin/product/${item.id}`
   await axios.delete(url)
     .then((res) => {
-      confirmRemoveOne.value = false
-      removedOne.value = {}
+      delDialog.value = false
+      alert(res.data.message)
       getData()
+      dataSource.value = { ...initVal, imagesUrl: []}
     })
     .catch(err => {
       alert(err.response?.data?.message)
     })
 }
-
-
-const onEdit = (clickItem) => {
-  editDialog.value = true
-  onEditProduct.value = { ...clickItem }
-}
-
-const onRemoveOne = (item) => {
-  confirmRemoveOne.value = true
-  removedOne.value = item
-}
-
-const delOneImg = async (id) => {
-  loadingEdit.value = true
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
-  await axios.put(url, { data: onEditProduct.value }).then((res) => {
-    confirmDelImgDialog.value = false
-    setTimeout(() => {
-      loadingEdit.value = false
-      borderImgId.value = null
-    }, 1000)
-  })
-    .catch(err => {
-      alert(err.response.data.message)
-    })
-}
-
-const addOneImg = async (id) => {
-  const url = `${apiUrl}/api/${apiPath}/admin/product/${id}`
-  let paramsObj = { data: { ...onEditProduct.value } }
-  await axios.put(url, paramsObj).then((res) => {
-    alert(res.data.message)
-    newOneImgPath.value = ''
-  })
-    .catch(err => {
-      alert(err.response.data.message)
-    })
-}
-
-
-
 // watch()中第一個參數為觀察ref物件，第二個參數為一個callBack，
 // 當狀態更新，就會針對其來執行callback。
-const reset = () => {
-  newMainImgPath.value = ''
-  newOneImgPath.value = ''
-  getData()
-}
-const clearAddSheet = () => {
-  addParams.value = {
-    title: "",
-    category: "",
-    origin_price: 0,
-    price: 0,
-    unit: "",
-    description: "",
-    content: "",
-    is_enabled: 1,
-    imageUrl: "",
-    imagesUrl: []
-  }
-}
-watch(confirmDelImgDialog, reset)
-watch(confirmDelImgDialog, clearAddSheet)
-
 </script>
 
 <template>
@@ -211,7 +116,11 @@ watch(confirmDelImgDialog, clearAddSheet)
         登出
       </v-btn>
     </nav>
-    <v-btn class="my-2 d-block ms-auto" color="green lighten-2" dark @click="dialog = true">
+    <v-btn class="my-2 d-block ms-auto" color="green lighten-2" dark @click="() => {
+      dialog = true
+      mode = 'addOne'
+      dataSource = { ...initVal, imagesUrl: [] }
+    }">
       建立新的商品
     </v-btn>
     <v-table>
@@ -248,276 +157,41 @@ watch(confirmDelImgDialog, clearAddSheet)
             <span v-else class="text-red-200">否</span>
           </td>
           <td class="flex justify-center gap-2 py-1">
-            <v-btn color="blue" @click="onEdit(item)">
+            <v-btn color="blue" @click="() => {
+              dialog = true
+              mode = 'editOne'
+              dataSource = { ...item }
+            }">
               編輯
             </v-btn>
-            <v-btn color="red" @click="onRemoveOne(item)">
+            <v-btn color="red" @click="() => {
+              delDialog = true
+              dataSource = { ...item }
+            }">
               刪除
             </v-btn>
           </td>
         </tr>
       </tbody>
     </v-table>
+    
     <div v-if="loading === true" class="flex justify-center py-2">
       <v-progress-circular class="block" color="blue-lighten-3" indeterminate :size="68"
         :width="5"></v-progress-circular>
     </div>
 
-    <!-- dialog 刪除產品 -->
-    <v-dialog v-model="delDialog" width="500">
-      <v-card>
-        <div class="bg-danger text-white">
-          <v-card-title class="text-h5 grey lighten-2">
-            <span>刪除產品</span>
-          </v-card-title>
-        </div>
-        <v-card-text>
-          是否刪除
-          <strong class="text-danger"></strong> {{ removedOne.title }}商品(刪除後將無法恢復)。
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn @click="delDialog = false">
-            取消
-          </v-btn>
-          <v-btn color="red" @click="removeOne">
-            確認刪除
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <detail-dialog :data-source='dataSource' :dialog='dialog' :mode='mode' 
+    @close-dialog='() => {
+      dialog = false
+      dataSource = { ...initVal, imagesUrl: [] }
+    }' 
+      @submit='addOne' @send-edit='editOne' />
 
-    <!-- dialog 新增產品 -->
-    <v-dialog v-model="dialog" width="800">
-      <v-card>
-        <v-card-title class="text-h5 grey lighten-2">
-          新增產品
-        </v-card-title>
-        <v-card-text>
-          <div class="row">
-            <div class="col-sm-4">
-              <div class="mb-2">
-                <div class="mb-3">
-                  <v-text-field v-model="addParams.imageUrl" label="主要圖片網址" placeholder="請輸入主圖連結" />
-                  <div class="d-flex gap-2 mb-2">
-                  </div>
-                </div>
-                <img
-                  :src="addParams.imageUrl.length > 5 ? addParams.imageUrl : 'https://fakeimg.pl/350x200/?text=preview'"
-                  :alt="addParams.imageUrl" />
-              </div>
-              <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
-              <div class="d-flex gap-2 mb-2">
-                <v-btn color="green" small @click="() => {
-                  addParams.imagesUrl.push(newOneImgPath)
-                }">
-                  新增圖片
-                </v-btn>
-                <v-btn v-if="addParams.imagesUrl" color="red" small @click="addSetDelImg">
-                  刪除圖片
-                </v-btn>
-              </div>
-              <div v-for="(image, index) in addParams.imagesUrl"
-                :class="{ delOneImg: borderImgId !== null && Number(borderImgId) === index }"
-                @click="borderImgId = index">
-                <img class="img-fluid mb-1" :src="image" :id="index" :alt="image">
-              </div>
-            </div>
-            <div class="col-sm-8">
-              <div class="mb-3">
-                <v-text-field v-model="addParams.title" label="產品標題(必填)" placeholder="請輸入標題"
-                  :rules="[v => !!v || '必填']" />
-              </div>
-
-              <div class="row">
-                <div class="mb-3 col-md-6">
-                  <v-text-field v-model="addParams.category" label="分類(必填)" placeholder="請輸入分類" />
-                </div>
-                <div class="mb-3 col-md-6">
-                  <v-text-field v-model="addParams.unit" label="單位(必填)" placeholder="請輸入單位" />
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="mb-3 col-md-6">
-                  <v-text-field type="number" v-model.number="addParams.origin_price" label="原價" placeholder="請輸入原價" />
-                </div>
-                <div class="mb-3 col-md-6">
-                  <v-text-field type="number" v-model.number="addParams.price" label="售價" placeholder="請輸入售價" />
-                </div>
-              </div>
-              <hr>
-
-              <div class="mb-3">
-                <v-textarea v-model="addParams.description" label="產品描述" placeholder="請輸入產品描述" variant="underlined" />
-              </div>
-              <div class="mb-3">
-                <v-textarea v-model="addParams.content" label="說明內容" placeholder="請輸入說明內容" variant="underlined" />
-              </div>
-              <div class="mb-3">
-                <div class="form-check">
-                  <v-checkbox v-model="addParams.is_enabled" label="是否啟用" color="success" value="success" hide-details
-                    :true-value="1" :false-value="0" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </v-card-text>
-        <v-divider></v-divider>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="red" @click="dialog = false">
-            取消
-          </v-btn>
-          <v-btn color="green" @click="addOne">
-            確認
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- dialog 需修改之產品詳情 -->
-    <v-dialog v-model="editDialog" width="800">
-      <v-card>
-        <div v-if="loadingEdit === true" class="flex justify-center py-2">
-          <v-progress-circular class="block" color="blue-lighten-3" indeterminate :size="68"
-            :width="5"></v-progress-circular>
-        </div>
-        <template v-if="loadingEdit === false">
-          <v-card-title class="text-h5 grey lighten-2">
-            修改產品
-          </v-card-title>
-          <v-card-text>
-            <div class="row">
-              <div class="col-sm-4">
-                <div class="mb-2">
-                  <div class="mb-3">
-                    <v-text-field v-model="onEditProduct.imageUrl" label="主要圖片網址" placeholder="請輸入主圖連結" />
-                    <div class="d-flex gap-2 mb-2">
-                    </div>
-                  </div>
-                  <img
-                    :src="onEditProduct.imageUrl.length > 5 ? onEditProduct.imageUrl : 'https://fakeimg.pl/350x200/?text=preview'"
-                    :alt="onEditProduct.imageUrl" />
-                </div>
-                <v-text-field v-model="newOneImgPath" label="圖片網址" placeholder="請輸入圖片連結" />
-                <div class="d-flex gap-2 mb-2">
-                  <v-btn color="green" small @click="onAddOneImg">
-                    新增圖片
-                  </v-btn>
-                  <v-btn v-if="onEditProduct.imagesUrl" color="red" small @click="confirmDelImgDialog = true">
-                    刪除圖片
-                  </v-btn>
-                </div>
-                <div v-for="(image, index) in onEditProduct.imagesUrl"
-                  :class="{ delOneImg: borderImgId === index }" @click="borderImgId = index">
-                  <img class="img-fluid mb-1" :src="image" :id="index" :alt="image">
-                </div>
-              </div>
-              <div class="col-sm-8">
-                <div class="mb-3">
-                  <v-text-field v-model="onEditProduct.title" label="產品標題" placeholder="請輸入標題" />
-                </div>
-
-                <div class="row">
-                  <div class="mb-3 col-md-6">
-                    <v-text-field v-model="onEditProduct.category" label="分類" placeholder="請輸入分類" />
-                  </div>
-                  <div class="mb-3 col-md-6">
-                    <v-text-field v-model="onEditProduct.unit" label="單位" placeholder="請輸入單位" />
-                  </div>
-                </div>
-
-                <div class="row">
-                  <div class="mb-3 col-md-6">
-                    <v-text-field type="number" v-model.number="onEditProduct.origin_price" label="原價"
-                      placeholder="請輸入原價" />
-                  </div>
-                  <div class="mb-3 col-md-6">
-                    <v-text-field type="number" v-model.number="onEditProduct.price" label="售價" placeholder="請輸入售價" />
-                  </div>
-                </div>
-                <hr>
-
-                <div class="mb-3">
-                  <v-textarea v-model="onEditProduct.description" label="產品描述" placeholder="請輸入產品描述"
-                    variant="underlined" />
-                </div>
-                <div class="mb-3">
-                  <v-textarea v-model="onEditProduct.content" label="說明內容" placeholder="請輸入說明內容" variant="underlined" />
-                </div>
-                <div class="mb-3">
-                  <div class="form-check">
-                    <v-checkbox v-model="onEditProduct.is_enabled" label="是否啟用" color="success" value="success"
-                      hide-details :true-value="1" :false-value="0" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </v-card-text>
-          <v-divider></v-divider>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="red" @click="editDialog = false">
-              取消
-            </v-btn>
-            <v-btn color="green" @click="submitEditSheet">
-              確認
-            </v-btn>
-          </v-card-actions>
-        </template>
-      </v-card>
-    </v-dialog>
-
-    <!-- dialog 是否刪除產品單圖?  -->
-    <v-dialog v-model="confirmDelImgDialog" width="500">
-      <v-card>
-        <div class="bg-danger text-white">
-          <v-card-title class="text-h5 grey lighten-2">
-            <span>刪除產品圖片</span>
-          </v-card-title>
-        </div>
-        <v-card-text v-if="borderImgId">
-          是否刪除
-          <strong class="text-danger">商品圖片(刪除後將無法恢復)。</strong>
-        </v-card-text>
-        <v-card-text v-if="!borderImgId">
-          請點選想刪除的圖片
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn @click="confirmDelImgDialog = false">
-            取消
-          </v-btn>
-          <v-btn v-if="borderImgId" color="red" @click="onDelOneImg">
-            確認刪除
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- dialog 是否刪除產品?  -->
-    <v-dialog v-model="confirmRemoveOne" width="500">
-      <v-card>
-        <div class="bg-danger text-white">
-          <v-card-title class="text-h5 grey lighten-2">
-            <span>刪除產品</span>
-          </v-card-title>
-        </div>
-        <v-card-text>
-          是否刪除
-          <strong class="text-danger">商品(刪除後將無法恢復)。</strong>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn @click="confirmRemoveOne = false">
-            取消
-          </v-btn>
-          <v-btn color="red" @click="removeOne">
-            確認刪除
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <confirm-del-one-dialog :data-source='dataSource' :del-dialog='delDialog' 
+    @close-del-dialog='() => {
+      delDialog = false
+      dataSource = { ...initVal, imagesUrl: [] }
+    }' 
+      @send-del-one='delOne' />
   </div>
 </template>
