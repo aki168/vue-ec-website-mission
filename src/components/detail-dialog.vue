@@ -99,10 +99,10 @@ watch(() => props.dialog, () => {
 
             <div class="row">
               <div class="mb-3 col-md-6">
-                <v-text-field type="number" v-model.number="item.origin_price" label="原價" placeholder="請輸入原價" />
+                <v-text-field type="number" v-model.number="item.origin_price" min=0 label="原價" placeholder="請輸入原價" />
               </div>
               <div class="mb-3 col-md-6">
-                <v-text-field type="number" v-model.number="item.price" label="售價" placeholder="請輸入售價" />
+                <v-text-field type="number" v-model.number="item.price" min=0  label="售價" placeholder="請輸入售價" />
               </div>
             </div>
             <hr>
