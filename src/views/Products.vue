@@ -2,25 +2,17 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import checkAdmin from '@/mixins/checkAdmin';
-import logout from '@/mixins/logout'
+import navbar from '@/components/navbar.vue'
+import loading from '@/components/loading.vue';
+
+import useResource from '@/composable/useResource'
 
 // data
-const apiUrl = 'https://vue3-course-api.hexschool.io/v2/';
-const apiPath = 'cryptalk';
-let products = ref([]);
-let tempProduct = ref({});
+const { products, getData, isLoading } = useResource()
+const isLogin = ref(true)
+const loginSuccess = () => { isLogin.value = true }
 
-// methods
-async function getData() {
-  const url = `${apiUrl}/api/${apiPath}/admin/products`;
-  await axios.get(url).then((res) => {
-    products.value = res.data.products
-    console.log(res.data.products)
-  })
-    .catch(err => {
-      alert(err.response.data.message)
-    })
-}
+let tempProduct = ref({});
 
 function showDetails(item) {
   tempProduct.value = item
@@ -29,19 +21,15 @@ function showDetails(item) {
 onMounted(() => {
   const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
   axios.defaults.headers.common.Authorization = token;
-  checkAdmin()
+  checkAdmin(loginSuccess)
+  getData()
 })
 </script>
 
 <template>
-  <nav class="bg-primary p-2 d-flex">
-    <h1 class="text-white px-2">LOGO</h1>
-    <button class="mx-5 btn btn-dark" @click="logout">
-      登出
-    </button>
-  </nav>
-  <div class="container">
-    <div class="row py-3">
+  <navbar :is-login="isLogin" :is-admin="false"/>
+  <div class="container py-10">
+    <div class="row py-3" v-if="!isLoading">
       <div class="col-md-6">
         <h2>產品列表</h2>
         <table class="table table-hover mt-4">
@@ -109,6 +97,7 @@ onMounted(() => {
         <p v-else class="text-secondary">請選擇一個商品查看</p>
       </div>
     </div>
+    <loading v-if="isLoading" />
   </div>
 </template>
 

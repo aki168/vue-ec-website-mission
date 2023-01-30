@@ -1,10 +1,18 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
-import logout from '@/mixins/logout';
+import navbar from '@/components/navbar.vue';
+import loading from '@/components/loading.vue';
 import checkAdmin from '@/mixins/checkAdmin';
 import detailDialog from '@/components/detail-dialog.vue';
 import confirmDelOneDialog from '@/components/confirm-del-one-dialog.vue';
+
+import useResource from '@/composable/useResource';
+
+const { getData, products, isLoading } = useResource()
+
+const isLogin = ref(false)
+const loginSuccess = () => { isLogin.value = true }
 
 const apiUrl = 'https://vue3-course-api.hexschool.io/v2';
 const apiPath = 'cryptalk';
@@ -21,27 +29,12 @@ const initVal = {
   imageUrl: "",
   // imagesUrl: []
 }
-const dataSource = ref({...initVal, imagesUrl: []})
+const dataSource = ref({ ...initVal, imagesUrl: [] })
 
-// init & wrap
-const products = ref([])
-const loading = ref(false)
-const getData = async () => {
-  loading.value = true
-  const url = `${apiUrl}/api/${apiPath}/admin/products`;
-  await axios.get(url).then((res) => {
-  let data = (res.data.products).map(item => item.imagesUrl? item : {...item, imagesUrl:[]})
-    products.value = data
-  })
-    .catch(err => {
-      alert(err.response.data.message)
-    })
-  loading.value = false
-}
 onMounted(() => {
   const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
   axios.defaults.headers.common.Authorization = token;
-  checkAdmin()
+  checkAdmin(loginSuccess)
   getData()
 })
 
@@ -56,7 +49,7 @@ const addOne = async (item) => {
     alert(res.data.message)
     dialog.value = false
     getData()
-    dataSource.value = { ...initVal, imagesUrl: []}
+    dataSource.value = { ...initVal, imagesUrl: [] }
   })
     .catch(err => {
       let msg = err.response?.data?.message;
@@ -76,7 +69,7 @@ const editOne = async (item) => {
     alert(res.data.message)
     dialog.value = false
     getData()
-    dataSource.value = { ...initVal, imagesUrl: []}
+    dataSource.value = { ...initVal, imagesUrl: [] }
   })
     .catch(err => {
       let msg = err.response?.data?.message;
@@ -97,23 +90,17 @@ const delOne = async (item) => {
       delDialog.value = false
       alert(res.data.message)
       getData()
-      dataSource.value = { ...initVal, imagesUrl: []}
+      dataSource.value = { ...initVal, imagesUrl: [] }
     })
     .catch(err => {
       alert(err.response?.data?.message)
     })
 }
-// watch()中第一個參數為觀察ref物件，第二個參數為一個callBack，
-// 當狀態更新，就會針對其來執行callback。
 </script>
 
 <template>
+  <navbar :is-login="isLogin" :is-admin="true"/>
   <div class="text-center container min-vh-100">
-    <nav class="p-2 d-flex">
-      <v-btn @click="logout">
-        登出
-      </v-btn>
-    </nav>
     <v-btn class="my-2 d-block ms-auto" color="green lighten-2" dark @click="() => {
       dialog = true
       mode = 'addOne'
@@ -144,7 +131,7 @@ const delOne = async (item) => {
           </th>
         </tr>
       </thead>
-      <tbody v-if="loading === false">
+      <tbody v-if="!isLoading">
         <tr v-for="item in products" :key="item.id">
           <td class="text-center">{{ item.category }}</td>
           <td class="text-center">{{ item.title }}</td>
@@ -172,24 +159,20 @@ const delOne = async (item) => {
         </tr>
       </tbody>
     </v-table>
-    
-    <div v-if="loading === true" class="flex justify-center py-2">
-      <v-progress-circular class="block" color="blue-lighten-3" indeterminate :size="68"
-        :width="5"></v-progress-circular>
-    </div>
 
-    <detail-dialog :data-source='dataSource' :dialog='dialog' :mode='mode' 
-    @close-dialog='() => {
+    <loading v-if="isLoading" />
+    <!-- <v-progress-circular class="block" color="blue-lighten-3" indeterminate :size="68"
+        :width="5"></v-progress-circular> -->
+
+
+    <detail-dialog :data-source='dataSource' :dialog='dialog' :mode='mode' @close-dialog='() => {
       dialog = false
       dataSource = { ...initVal, imagesUrl: [] }
-    }' 
-      @submit='addOne' @send-edit='editOne' />
+    }' @submit='addOne' @send-edit='editOne' />
 
-    <confirm-del-one-dialog :data-source='dataSource' :del-dialog='delDialog' 
-    @close-del-dialog='() => {
+    <confirm-del-one-dialog :data-source='dataSource' :del-dialog='delDialog' @close-del-dialog='() => {
       delDialog = false
       dataSource = { ...initVal, imagesUrl: [] }
-    }' 
-      @send-del-one='delOne' />
+    }' @send-del-one='delOne' />
   </div>
 </template>
